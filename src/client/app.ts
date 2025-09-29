@@ -402,12 +402,12 @@ class KudosApp {
 						Actions that earn a star
 					</h4>
 					<div class="space-y-2">
-						${sortRulesByOrder(positiveRules).map(rule => `
+						${sortRulesByOrder(positiveRules).map((rule, index) => `
 							<div class="flex items-start p-3 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors duration-150">
-								<div class="flex-shrink-0 w-5 h-5 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5">
-									+
+								<div class="flex-shrink-0 w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5">
+									${index + 1}
 								</div>
-								<p class="text-sm text-gray-800 leading-relaxed">${this.escapeHtml(rule.description)}</p>
+								<p class="text-sm text-gray-800 leading-relaxed"><span class="font-medium">${index + 1}.</span> ${this.escapeHtml(rule.description)}</p>
 							</div>
 						`).join('')}
 					</div>
@@ -421,12 +421,12 @@ class KudosApp {
 						Actions that lose a star
 					</h4>
 					<div class="space-y-2">
-						${sortRulesByOrder(negativeRules).map(rule => `
+						${sortRulesByOrder(negativeRules).map((rule, index) => `
 							<div class="flex items-start p-3 bg-red-50 rounded-lg border border-red-200 hover:bg-red-100 transition-colors duration-150">
-								<div class="flex-shrink-0 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5">
-									−
+								<div class="flex-shrink-0 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5">
+									${index + 1}
 								</div>
-								<p class="text-sm text-gray-800 leading-relaxed">${this.escapeHtml(rule.description)}</p>
+								<p class="text-sm text-gray-800 leading-relaxed"><span class="font-medium">${index + 1}.</span> ${this.escapeHtml(rule.description)}</p>
 							</div>
 						`).join('')}
 					</div>
