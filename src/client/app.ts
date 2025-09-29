@@ -178,7 +178,8 @@ class KudosApp {
 					<div class="inline-block p-4 bg-blue-50 rounded-lg">
 						<p class="text-sm text-blue-800 mb-2"><strong>How to use:</strong></p>
 						<p class="text-sm text-blue-700">• Tap student name to add a star (max 4)</p>
-						<p class="text-sm text-blue-700">• Long-press or right-click to remove a star</p>
+						<p class="text-sm text-blue-700">• Right-click to remove a star</p>
+						<p class="text-sm text-blue-700">• Hover over student cards for +/- controls</p>
 					</div>
 				</div>
 			</div>
@@ -192,12 +193,32 @@ class KudosApp {
 
 		return `
 			<div
-				class="student-card bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-200 cursor-pointer border-2 border-transparent hover:border-blue-200 transform hover:-translate-y-1"
+				class="student-card bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-200 cursor-pointer border-2 border-transparent hover:border-blue-200 transform hover:-translate-y-1 relative group"
 				data-student-id="${student.id}"
 				role="button"
 				tabindex="0"
-				aria-label="${this.escapeHtml(student.name)} has ${student.stars} star${student.stars !== 1 ? 's' : ''}. Click to add a star, long-press or right-click to remove a star."
+				aria-label="${this.escapeHtml(student.name)} has ${student.stars} star${student.stars !== 1 ? 's' : ''}. Click to add a star, right-click to remove a star."
 			>
+				<!-- Hover Controls -->
+				<div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+					<button
+						class="hover-control add-star-btn w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg transition-colors duration-150"
+						data-student-id="${student.id}"
+						aria-label="Add star to ${this.escapeHtml(student.name)}"
+						${student.stars >= 4 ? 'disabled' : ''}
+					>
+						+
+					</button>
+					<button
+						class="hover-control remove-star-btn w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg transition-colors duration-150"
+						data-student-id="${student.id}"
+						aria-label="Remove star from ${this.escapeHtml(student.name)}"
+						${student.stars <= 0 ? 'disabled' : ''}
+					>
+						−
+					</button>
+				</div>
+
 				<div class="text-center">
 					<h3 class="text-lg font-semibold text-gray-800 mb-3">${this.escapeHtml(student.name)}</h3>
 					<div class="text-3xl mb-2" aria-hidden="true">${stars}</div>
@@ -319,17 +340,13 @@ class KudosApp {
 		// Student card interactions
 		document.querySelectorAll('.student-card').forEach(card => {
 			const studentId = (card as HTMLElement).dataset.studentId!;
-			let pressTimer: number;
-			let isLongPress = false;
 
 			const addStar = () => {
-				if (!isLongPress) {
-					const student = this.state.students.find(s => s.id === studentId);
-					if (student && student.stars < 4) {
-						student.stars++;
-						this.saveState();
-						this.updateStudentCard(studentId, student);
-					}
+				const student = this.state.students.find(s => s.id === studentId);
+				if (student && student.stars < 4) {
+					student.stars++;
+					this.saveState();
+					this.updateStudentCard(studentId, student);
 				}
 			};
 
@@ -342,25 +359,12 @@ class KudosApp {
 				}
 			};
 
-			// Click/tap to add star
-			card.addEventListener('click', addStar);
-
-			// Long-press to remove star (mobile)
-			card.addEventListener('touchstart', (e) => {
-				isLongPress = false;
-				pressTimer = window.setTimeout(() => {
-					isLongPress = true;
-					navigator.vibrate?.(100);
-					removeStar();
-				}, 800);
-			});
-
-			card.addEventListener('touchend', () => {
-				clearTimeout(pressTimer);
-			});
-
-			card.addEventListener('touchmove', () => {
-				clearTimeout(pressTimer);
+			// Click/tap to add star (only if not clicking hover controls)
+			card.addEventListener('click', (e) => {
+				const target = e.target as HTMLElement;
+				if (!target.classList.contains('hover-control') && !target.closest('.hover-control')) {
+					addStar();
+				}
 			});
 
 			// Right-click to remove star (desktop)
@@ -380,6 +384,33 @@ class KudosApp {
 				}
 			});
 		});
+
+		// Hover control interactions
+		document.querySelectorAll('.add-star-btn').forEach(btn => {
+			btn.addEventListener('click', (e) => {
+				e.stopPropagation();
+				const studentId = (btn as HTMLElement).dataset.studentId!;
+				const student = this.state.students.find(s => s.id === studentId);
+				if (student && student.stars < 4) {
+					student.stars++;
+					this.saveState();
+					this.updateStudentCard(studentId, student);
+				}
+			});
+		});
+
+		document.querySelectorAll('.remove-star-btn').forEach(btn => {
+			btn.addEventListener('click', (e) => {
+				e.stopPropagation();
+				const studentId = (btn as HTMLElement).dataset.studentId!;
+				const student = this.state.students.find(s => s.id === studentId);
+				if (student && student.stars > 0) {
+					student.stars--;
+					this.saveState();
+					this.updateStudentCard(studentId, student);
+				}
+			});
+		});
 	}
 
 	private updateStudentCard(studentId: string, student: Student): void {
@@ -387,12 +418,25 @@ class KudosApp {
 		if (card) {
 			const stars = '⭐'.repeat(student.stars) + '☆'.repeat(4 - student.stars);
 			const starsElement = card.querySelector('.text-3xl');
-			const countElement = card.querySelector('.text-sm');
+			const countElement = card.querySelector('.text-center .text-sm');
 
 			if (starsElement) starsElement.textContent = stars;
 			if (countElement) countElement.textContent = `${student.stars}/4 stars`;
 
-			card.setAttribute('aria-label', `${student.name} has ${student.stars} star${student.stars !== 1 ? 's' : ''}. Click to add a star, long-press or right-click to remove a star.`);
+			card.setAttribute('aria-label', `${student.name} has ${student.stars} star${student.stars !== 1 ? 's' : ''}. Click to add a star, right-click to remove a star.`);
+
+			// Update hover control button states
+			const addBtn = card.querySelector('.add-star-btn') as HTMLButtonElement;
+			const removeBtn = card.querySelector('.remove-star-btn') as HTMLButtonElement;
+
+			if (addBtn) {
+				addBtn.disabled = student.stars >= 4;
+				addBtn.style.opacity = student.stars >= 4 ? '0.5' : '1';
+			}
+			if (removeBtn) {
+				removeBtn.disabled = student.stars <= 0;
+				removeBtn.style.opacity = student.stars <= 0 ? '0.5' : '1';
+			}
 
 			// Add visual feedback
 			card.classList.add('scale-105', 'ring-2', 'ring-yellow-300');
