@@ -1,5 +1,5 @@
 import type { AppState, Student, Rule } from '../types';
-import { loadAppState, saveAppState, exportAppData, validateImportData, downloadJSON, sortStudentsAlphabetically, sortRulesByOrder } from '../utils/storage';
+import { loadAppState, saveAppState, exportAppData, validateImportData, downloadJSON, sortStudentsAlphabetically, sortRulesByOrder, defaultAppState } from '../utils/storage';
 
 class KudosApp {
 	private state: AppState;
@@ -161,6 +161,13 @@ class KudosApp {
 								disabled="${this.state.students.length === 0 || !this.state.className.trim()}"
 							>
 								Save and Start Awarding ⭐
+							</button>
+							<button
+								type="button"
+								id="reset-btn"
+								class="px-8 py-4 border-2 border-red-500 text-red-600 rounded-lg hover:bg-red-50 hover:border-red-600 transition-colors focus:ring-2 focus:ring-red-500 focus:ring-offset-2 font-medium"
+							>
+								🔄 Reset All Data
 							</button>
 						</div>
 
@@ -485,6 +492,7 @@ class KudosApp {
 		const newNegativeRuleInput = document.getElementById('new-negative-rule') as HTMLInputElement;
 		const addNegativeRuleBtn = document.getElementById('add-negative-rule-btn') as HTMLButtonElement;
 		const saveStartBtn = document.getElementById('save-and-start-btn') as HTMLButtonElement;
+		const resetBtn = document.getElementById('reset-btn') as HTMLButtonElement;
 		const exportBtn = document.getElementById('export-btn') as HTMLButtonElement;
 		const importFile = document.getElementById('import-file') as HTMLInputElement;
 
@@ -600,6 +608,11 @@ class KudosApp {
 				this.saveState();
 				this.render();
 			}
+		});
+
+		// Reset button
+		resetBtn.addEventListener('click', () => {
+			this.resetAllData();
 		});
 
 		// Export/Import
@@ -840,6 +853,117 @@ class KudosApp {
 
 	private validateSetupForm(): boolean {
 		return this.state.className.trim().length > 0 && this.state.students.length > 0;
+	}
+
+	private showConfirmationDialog(message: string, confirmButtonText: string = 'Confirm'): Promise<boolean> {
+		return new Promise((resolve) => {
+			const overlay = document.createElement('div');
+			overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+			overlay.id = 'confirmation-overlay';
+
+			overlay.innerHTML = `
+				<div class="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4 transform scale-95 opacity-0 transition-all duration-200" id="confirmation-modal">
+					<div class="text-center mb-6">
+						<div class="text-red-500 text-4xl mb-3">⚠️</div>
+						<h3 class="text-lg font-semibold text-gray-800 mb-2">Confirm Reset</h3>
+						<p class="text-gray-600">${message}</p>
+					</div>
+					<div class="flex gap-3">
+						<button
+							id="confirm-cancel-btn"
+							class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+						>
+							Cancel
+						</button>
+						<button
+							id="confirm-yes-btn"
+							class="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+						>
+							${confirmButtonText}
+						</button>
+					</div>
+				</div>
+			`;
+
+			document.body.appendChild(overlay);
+
+			const modal = overlay.querySelector('#confirmation-modal') as HTMLElement;
+
+			requestAnimationFrame(() => {
+				overlay.style.opacity = '1';
+				modal.style.transform = 'scale(1)';
+				modal.style.opacity = '1';
+			});
+
+			const closeDialog = (result: boolean) => {
+				overlay.style.opacity = '0';
+				modal.style.transform = 'scale(0.95)';
+				modal.style.opacity = '0';
+
+				setTimeout(() => {
+					document.body.removeChild(overlay);
+					resolve(result);
+				}, 200);
+			};
+
+			overlay.querySelector('#confirm-cancel-btn')?.addEventListener('click', () => closeDialog(false));
+			overlay.querySelector('#confirm-yes-btn')?.addEventListener('click', () => closeDialog(true));
+
+			overlay.addEventListener('click', (e) => {
+				if (e.target === overlay) {
+					closeDialog(false);
+				}
+			});
+
+			overlay.addEventListener('keydown', (e) => {
+				if (e.key === 'Escape') {
+					closeDialog(false);
+				}
+			});
+		});
+	}
+
+	private async resetAllData(): Promise<void> {
+		const confirmed = await this.showConfirmationDialog(
+			'Are you sure you want to reset all data? This will clear your class name, students, and rules. This action cannot be undone.',
+			'Yes, Reset All'
+		);
+
+		if (confirmed) {
+			this.state = { ...defaultAppState };
+			this.saveState();
+			this.showSuccessMessage('All data has been reset successfully!');
+			this.render();
+		}
+	}
+
+	private showSuccessMessage(message: string): void {
+		const successElement = document.createElement('div');
+		successElement.className = 'fixed top-4 right-4 z-50 px-6 py-3 bg-green-600 text-white rounded-lg shadow-lg transform translate-x-full opacity-0 transition-all duration-300';
+		successElement.innerHTML = `
+			<div class="flex items-center">
+				<span class="text-xl mr-3">✅</span>
+				<span class="font-medium">${message}</span>
+			</div>
+		`;
+
+		document.body.appendChild(successElement);
+
+		requestAnimationFrame(() => {
+			successElement.style.transform = 'translateX(0)';
+			successElement.style.opacity = '1';
+		});
+
+		setTimeout(() => {
+			successElement.style.transform = 'translateX(full)';
+			successElement.style.opacity = '0';
+
+			setTimeout(() => {
+				if (successElement.parentNode) {
+					document.body.removeChild(successElement);
+				}
+			}, 300);
+		}, 3000);
 	}
 
 	private saveState(): void {
