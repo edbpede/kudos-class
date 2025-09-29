@@ -267,7 +267,7 @@ class KudosApp {
 		const totalStars = this.state.students.reduce((sum, student) => sum + student.stars, 0);
 
 		this.appContainer.innerHTML = `
-			<div class="container mx-auto px-4 py-6">
+			<div class="container mx-auto px-4 py-6 max-w-7xl">
 				<header class="text-center mb-6">
 					<div class="flex items-center justify-center gap-4 mb-4">
 						<button
@@ -288,20 +288,32 @@ class KudosApp {
 					</div>
 				</header>
 
-				<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-					${sortStudentsAlphabetically(this.state.students).map(student => this.renderStudentCard(student)).join('')}
-				</div>
+				${this.renderRulesDisplay()}
 
-				<div class="mt-8 text-center">
-					<div class="inline-block p-4 bg-blue-50 rounded-lg">
-						<p class="text-sm text-blue-800 mb-2"><strong>How to use:</strong></p>
-						<p class="text-sm text-blue-700">• Tap student name to add a star (max 4)</p>
-						<p class="text-sm text-blue-700">• Right-click to remove a star</p>
-						<p class="text-sm text-blue-700">• Hover over student cards for +/- controls</p>
+				<!-- Main content area with responsive grid -->
+				<div class="grid gap-6 lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_360px]">
+					<!-- Student cards section -->
+					<div class="order-2 lg:order-1">
+						<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+							${sortStudentsAlphabetically(this.state.students).map(student => this.renderStudentCard(student)).join('')}
+						</div>
+
+						<!-- Instructions section -->
+						<div class="mt-8 text-center">
+							<div class="inline-block p-4 bg-blue-50 rounded-lg">
+								<p class="text-sm text-blue-800 mb-2"><strong>How to use:</strong></p>
+								<p class="text-sm text-blue-700">• Tap student name to add a star (max 4)</p>
+								<p class="text-sm text-blue-700">• Right-click to remove a star</p>
+								<p class="text-sm text-blue-700">• Hover over student cards for +/- controls</p>
+							</div>
+						</div>
+					</div>
+
+					<!-- Rules sidebar (hidden on mobile, visible on larger screens) -->
+					<div class="order-1 lg:order-2 hidden lg:block">
+						${this.renderRulesSidebar()}
 					</div>
 				</div>
-
-				${this.renderRulesDisplay()}
 			</div>
 		`;
 
@@ -317,63 +329,109 @@ class KudosApp {
 		const negativeRules = this.state.rules.filter(rule => rule.type === 'negative');
 
 		return `
-			<div class="fixed top-2 right-2 sm:top-4 sm:right-4 z-50 max-w-xs sm:max-w-sm">
-				<div class="bg-white rounded-lg shadow-xl border border-gray-200">
-					<div class="flex items-center justify-between p-3 border-b border-gray-100">
-						<h3 class="text-sm font-semibold text-gray-800 flex items-center">
-							<span class="mr-1 text-base">📋</span>
-							Rules
-						</h3>
-						<button
-							id="toggle-rules-btn"
-							class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors focus:ring-2 focus:ring-gray-500 focus:ring-offset-1"
-							aria-label="Toggle rules visibility"
-						>
-							<span id="toggle-rules-text">Hide</span>
-						</button>
-					</div>
-
-					<div id="rules-content" class="p-3 max-h-96 overflow-y-auto">
-						${positiveRules.length > 0 ? `
-							<div class="mb-3">
-								<h4 class="text-xs font-medium text-green-700 mb-2 flex items-center">
-									<span class="mr-1">🌟</span>
-									Earn a star
-								</h4>
-								<div class="space-y-1">
-									${sortRulesByOrder(positiveRules).map(rule => `
-										<div class="flex items-start p-2 bg-green-50 rounded border border-green-200">
-											<div class="flex-shrink-0 w-4 h-4 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2 mt-0.5">
-												+
-											</div>
-											<p class="text-xs text-gray-800 leading-relaxed">${this.escapeHtml(rule.description)}</p>
-										</div>
-									`).join('')}
+			<!-- Mobile Rules Banner (visible only on mobile/tablet) -->
+			<div class="mb-6 lg:hidden">
+				<div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+					<button
+						id="toggle-mobile-rules-btn"
+						class="w-full px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100 hover:from-blue-100 hover:to-indigo-100 transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+						aria-label="Toggle classroom rules"
+						aria-expanded="false"
+					>
+						<div class="flex items-center justify-between">
+							<div class="flex items-center">
+								<span class="text-lg mr-3">📋</span>
+								<div class="text-left">
+									<h3 class="text-sm font-semibold text-gray-800">Classroom Rules</h3>
+									<p class="text-xs text-gray-500">${positiveRules.length + negativeRules.length} rule${positiveRules.length + negativeRules.length !== 1 ? 's' : ''} • Tap to view</p>
 								</div>
 							</div>
-						` : ''}
-
-						${negativeRules.length > 0 ? `
-							<div>
-								<h4 class="text-xs font-medium text-red-700 mb-2 flex items-center">
-									<span class="mr-1">⚠️</span>
-									Lose a star
-								</h4>
-								<div class="space-y-1">
-									${sortRulesByOrder(negativeRules).map(rule => `
-										<div class="flex items-start p-2 bg-red-50 rounded border border-red-200">
-											<div class="flex-shrink-0 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2 mt-0.5">
-												−
-											</div>
-											<p class="text-xs text-gray-800 leading-relaxed">${this.escapeHtml(rule.description)}</p>
-										</div>
-									`).join('')}
-								</div>
+							<div class="flex items-center">
+								<span id="mobile-rules-chevron" class="transform transition-transform duration-200">
+									<svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+										<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+									</svg>
+								</span>
 							</div>
-						` : ''}
+						</div>
+					</button>
+
+					<div id="mobile-rules-content" class="hidden">
+						<div class="p-4 space-y-4">
+							${this.renderRulesContent(positiveRules, negativeRules)}
+						</div>
 					</div>
 				</div>
 			</div>
+		`;
+	}
+
+	private renderRulesSidebar(): string {
+		if (this.state.rules.length === 0) {
+			return '';
+		}
+
+		const positiveRules = this.state.rules.filter(rule => rule.type === 'positive');
+		const negativeRules = this.state.rules.filter(rule => rule.type === 'negative');
+
+		return `
+			<div class="sticky top-6">
+				<div class="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+					<div class="px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100">
+						<h3 class="text-sm font-semibold text-gray-800 flex items-center">
+							<span class="text-lg mr-2">📋</span>
+							Classroom Rules
+						</h3>
+						<p class="text-xs text-gray-500 mt-1">${positiveRules.length + negativeRules.length} rule${positiveRules.length + negativeRules.length !== 1 ? 's' : ''} to guide behavior</p>
+					</div>
+
+					<div class="p-4 max-h-[calc(100vh-200px)] overflow-y-auto">
+						${this.renderRulesContent(positiveRules, negativeRules)}
+					</div>
+				</div>
+			</div>
+		`;
+	}
+
+	private renderRulesContent(positiveRules: any[], negativeRules: any[]): string {
+		return `
+			${positiveRules.length > 0 ? `
+				<div class="mb-4">
+					<h4 class="text-sm font-medium text-emerald-700 mb-3 flex items-center">
+						<span class="mr-2 text-base">🌟</span>
+						Actions that earn a star
+					</h4>
+					<div class="space-y-2">
+						${sortRulesByOrder(positiveRules).map(rule => `
+							<div class="flex items-start p-3 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition-colors duration-150">
+								<div class="flex-shrink-0 w-5 h-5 bg-emerald-500 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5">
+									+
+								</div>
+								<p class="text-sm text-gray-800 leading-relaxed">${this.escapeHtml(rule.description)}</p>
+							</div>
+						`).join('')}
+					</div>
+				</div>
+			` : ''}
+
+			${negativeRules.length > 0 ? `
+				<div>
+					<h4 class="text-sm font-medium text-red-700 mb-3 flex items-center">
+						<span class="mr-2 text-base">⚠️</span>
+						Actions that lose a star
+					</h4>
+					<div class="space-y-2">
+						${sortRulesByOrder(negativeRules).map(rule => `
+							<div class="flex items-start p-3 bg-red-50 rounded-lg border border-red-200 hover:bg-red-100 transition-colors duration-150">
+								<div class="flex-shrink-0 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold mr-3 mt-0.5">
+									−
+								</div>
+								<p class="text-sm text-gray-800 leading-relaxed">${this.escapeHtml(rule.description)}</p>
+							</div>
+						`).join('')}
+					</div>
+				</div>
+			` : ''}
 		`;
 	}
 
@@ -588,17 +646,46 @@ class KudosApp {
 			this.render();
 		});
 
-		// Rules toggle functionality
-		const toggleRulesBtn = document.getElementById('toggle-rules-btn');
-		const rulesContent = document.getElementById('rules-content');
-		const toggleRulesText = document.getElementById('toggle-rules-text');
+		// Mobile rules toggle functionality
+		const toggleMobileRulesBtn = document.getElementById('toggle-mobile-rules-btn');
+		const mobileRulesContent = document.getElementById('mobile-rules-content');
+		const mobileRulesChevron = document.getElementById('mobile-rules-chevron');
 
-		if (toggleRulesBtn && rulesContent && toggleRulesText) {
-			toggleRulesBtn.addEventListener('click', () => {
-				const isHidden = rulesContent.style.display === 'none';
-				rulesContent.style.display = isHidden ? 'block' : 'none';
-				toggleRulesText.textContent = isHidden ? 'Hide' : 'Show';
-				toggleRulesBtn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+		if (toggleMobileRulesBtn && mobileRulesContent && mobileRulesChevron) {
+			toggleMobileRulesBtn.addEventListener('click', () => {
+				const isHidden = mobileRulesContent.classList.contains('hidden');
+
+				if (isHidden) {
+					// Show rules
+					mobileRulesContent.classList.remove('hidden');
+					mobileRulesContent.style.display = 'block';
+					mobileRulesChevron.style.transform = 'rotate(180deg)';
+					toggleMobileRulesBtn.setAttribute('aria-expanded', 'true');
+
+					// Smooth reveal animation
+					requestAnimationFrame(() => {
+						mobileRulesContent.style.opacity = '0';
+						mobileRulesContent.style.transform = 'translateY(-10px)';
+						mobileRulesContent.style.transition = 'opacity 0.2s ease-out, transform 0.2s ease-out';
+
+						requestAnimationFrame(() => {
+							mobileRulesContent.style.opacity = '1';
+							mobileRulesContent.style.transform = 'translateY(0)';
+						});
+					});
+				} else {
+					// Hide rules
+					mobileRulesContent.style.transition = 'opacity 0.2s ease-in, transform 0.2s ease-in';
+					mobileRulesContent.style.opacity = '0';
+					mobileRulesContent.style.transform = 'translateY(-10px)';
+					mobileRulesChevron.style.transform = 'rotate(0deg)';
+					toggleMobileRulesBtn.setAttribute('aria-expanded', 'false');
+
+					setTimeout(() => {
+						mobileRulesContent.classList.add('hidden');
+						mobileRulesContent.style.display = 'none';
+					}, 200);
+				}
 			});
 		}
 
