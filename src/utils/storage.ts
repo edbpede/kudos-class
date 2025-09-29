@@ -1,11 +1,12 @@
-import type { AppState, ImportExportData, Student } from '../types';
+import type { AppState, ImportExportData, Student, Rule } from '../types';
 
 const STORAGE_KEY = 'kudos-class-app-state';
 
 export const defaultAppState: AppState = {
   mode: 'setup',
   className: '',
-  students: []
+  students: [],
+  rules: []
 };
 
 export function loadAppState(): AppState {
@@ -13,7 +14,12 @@ export function loadAppState(): AppState {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
-      return { ...defaultAppState, ...parsed };
+      // Ensure backward compatibility by adding missing fields
+      return {
+        ...defaultAppState,
+        ...parsed,
+        rules: parsed.rules || [] // Ensure rules array exists
+      };
     }
   } catch (error) {
     console.warn('Failed to load app state from localStorage:', error);
@@ -33,6 +39,7 @@ export function exportAppData(state: AppState): ImportExportData {
   return {
     className: state.className,
     students: sortStudentsAlphabetically(state.students),
+    rules: sortRulesByOrder(state.rules),
     exportDate: new Date().toISOString(),
     version: '1.0'
   };
@@ -45,6 +52,7 @@ export function validateImportData(data: any): ImportExportData | null {
       data !== null &&
       typeof data.className === 'string' &&
       Array.isArray(data.students) &&
+      Array.isArray(data.rules || []) && // rules are optional for backward compatibility
       typeof data.exportDate === 'string' &&
       typeof data.version === 'string'
     ) {
@@ -59,8 +67,22 @@ export function validateImportData(data: any): ImportExportData | null {
         student.stars <= 4
       );
 
-      if (validStudents) {
-        return data as ImportExportData;
+      // Validate rules structure (if rules exist)
+      const validRules = !data.rules || data.rules.every((rule: any) =>
+        typeof rule === 'object' &&
+        rule !== null &&
+        typeof rule.id === 'string' &&
+        typeof rule.description === 'string' &&
+        (rule.type === 'positive' || rule.type === 'negative') &&
+        typeof rule.order === 'number'
+      );
+
+      if (validStudents && validRules) {
+        // Ensure rules array exists for backward compatibility
+        return {
+          ...data,
+          rules: data.rules || []
+        } as ImportExportData;
       }
     }
   } catch (error) {
@@ -93,4 +115,18 @@ export function sortStudentsAlphabetically(students: Student[]): Student[] {
 
   // Create a copy of the array to avoid mutating the original
   return [...students].sort((a, b) => collator.compare(a.name, b.name));
+}
+
+export function sortRulesByOrder(rules: Rule[]): Rule[] {
+  // Create a copy of the array to avoid mutating the original
+  // Sort by order field, then by type (positive first), then by description
+  return [...rules].sort((a, b) => {
+    if (a.order !== b.order) {
+      return a.order - b.order;
+    }
+    if (a.type !== b.type) {
+      return a.type === 'positive' ? -1 : 1;
+    }
+    return a.description.localeCompare(b.description);
+  });
 }

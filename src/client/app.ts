@@ -1,5 +1,5 @@
-import type { AppState, Student } from '../types';
-import { loadAppState, saveAppState, exportAppData, validateImportData, downloadJSON, sortStudentsAlphabetically } from '../utils/storage';
+import type { AppState, Student, Rule } from '../types';
+import { loadAppState, saveAppState, exportAppData, validateImportData, downloadJSON, sortStudentsAlphabetically, sortRulesByOrder } from '../utils/storage';
 
 class KudosApp {
 	private state: AppState;
@@ -86,6 +86,73 @@ class KudosApp {
 							</div>
 						</div>
 
+						<div>
+							<label class="block text-sm font-medium text-gray-700 mb-4">
+								Classroom Rules
+							</label>
+							<p class="text-sm text-gray-600 mb-4">Set clear expectations for your students. These will be displayed during awarding mode.</p>
+
+							<!-- Positive Rules Section -->
+							<div class="mb-6">
+								<h4 class="text-sm font-semibold text-green-700 mb-3 flex items-center">
+									<span class="mr-2">⭐</span> Actions that earn a star
+								</h4>
+								<div class="space-y-3">
+									<div class="flex gap-2">
+										<input
+											type="text"
+											id="new-positive-rule"
+											placeholder="e.g., Raising hand before speaking"
+											class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
+											aria-label="New positive rule"
+											maxlength="100"
+										>
+										<button
+											type="button"
+											id="add-positive-rule-btn"
+											class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+											aria-label="Add positive rule"
+										>
+											Add
+										</button>
+									</div>
+									<div id="positive-rules-list" class="space-y-2">
+										${this.renderPositiveRulesList()}
+									</div>
+								</div>
+							</div>
+
+							<!-- Negative Rules Section -->
+							<div class="mb-6">
+								<h4 class="text-sm font-semibold text-red-700 mb-3 flex items-center">
+									<span class="mr-2">⭐</span> Actions that lose a star
+								</h4>
+								<div class="space-y-3">
+									<div class="flex gap-2">
+										<input
+											type="text"
+											id="new-negative-rule"
+											placeholder="e.g., Talking without permission"
+											class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-colors"
+											aria-label="New negative rule"
+											maxlength="100"
+										>
+										<button
+											type="button"
+											id="add-negative-rule-btn"
+											class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+											aria-label="Add negative rule"
+										>
+											Add
+										</button>
+									</div>
+									<div id="negative-rules-list" class="space-y-2">
+										${this.renderNegativeRulesList()}
+									</div>
+								</div>
+							</div>
+						</div>
+
 						<div class="flex flex-col sm:flex-row gap-4">
 							<button
 								type="submit"
@@ -145,6 +212,56 @@ class KudosApp {
 		`).join('');
 	}
 
+	private renderPositiveRulesList(): string {
+		const positiveRules = this.state.rules.filter(rule => rule.type === 'positive');
+		if (positiveRules.length === 0) {
+			return '<p class="text-gray-500 text-center py-4 border-2 border-dashed border-gray-200 rounded-lg">No positive rules added yet. Add rules to encourage good behavior.</p>';
+		}
+
+		const sortedRules = sortRulesByOrder(positiveRules);
+		return sortedRules.map(rule => `
+			<div class="flex items-center justify-between p-3 bg-green-50 rounded-lg border border-green-200">
+				<div class="flex items-center flex-1">
+					<span class="text-green-600 mr-2">⭐</span>
+					<span class="font-medium text-gray-800">${this.escapeHtml(rule.description)}</span>
+				</div>
+				<button
+					type="button"
+					class="remove-rule-btn px-3 py-1 text-red-600 hover:bg-red-50 rounded transition-colors focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+					data-rule-id="${rule.id}"
+					aria-label="Remove rule: ${this.escapeHtml(rule.description)}"
+				>
+					Remove
+				</button>
+			</div>
+		`).join('');
+	}
+
+	private renderNegativeRulesList(): string {
+		const negativeRules = this.state.rules.filter(rule => rule.type === 'negative');
+		if (negativeRules.length === 0) {
+			return '<p class="text-gray-500 text-center py-4 border-2 border-dashed border-gray-200 rounded-lg">No negative rules added yet. Add rules to discourage unwanted behavior.</p>';
+		}
+
+		const sortedRules = sortRulesByOrder(negativeRules);
+		return sortedRules.map(rule => `
+			<div class="flex items-center justify-between p-3 bg-red-50 rounded-lg border border-red-200">
+				<div class="flex items-center flex-1">
+					<span class="text-red-600 mr-2">⭐</span>
+					<span class="font-medium text-gray-800">${this.escapeHtml(rule.description)}</span>
+				</div>
+				<button
+					type="button"
+					class="remove-rule-btn px-3 py-1 text-red-600 hover:bg-red-50 rounded transition-colors focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+					data-rule-id="${rule.id}"
+					aria-label="Remove rule: ${this.escapeHtml(rule.description)}"
+				>
+					Remove
+				</button>
+			</div>
+		`).join('');
+	}
+
 	private renderAwardingMode(): void {
 		const studentCount = this.state.students.length;
 		const totalStars = this.state.students.reduce((sum, student) => sum + student.stars, 0);
@@ -183,10 +300,81 @@ class KudosApp {
 						<p class="text-sm text-blue-700">• Hover over student cards for +/- controls</p>
 					</div>
 				</div>
+
+				${this.renderRulesDisplay()}
 			</div>
 		`;
 
 		this.attachAwardingModeListeners();
+	}
+
+	private renderRulesDisplay(): string {
+		if (this.state.rules.length === 0) {
+			return '';
+		}
+
+		const positiveRules = this.state.rules.filter(rule => rule.type === 'positive');
+		const negativeRules = this.state.rules.filter(rule => rule.type === 'negative');
+
+		return `
+			<div class="fixed top-2 right-2 sm:top-4 sm:right-4 z-50 max-w-xs sm:max-w-sm">
+				<div class="bg-white rounded-lg shadow-xl border border-gray-200">
+					<div class="flex items-center justify-between p-3 border-b border-gray-100">
+						<h3 class="text-sm font-semibold text-gray-800 flex items-center">
+							<span class="mr-1 text-base">📋</span>
+							Rules
+						</h3>
+						<button
+							id="toggle-rules-btn"
+							class="px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded transition-colors focus:ring-2 focus:ring-gray-500 focus:ring-offset-1"
+							aria-label="Toggle rules visibility"
+						>
+							<span id="toggle-rules-text">Hide</span>
+						</button>
+					</div>
+
+					<div id="rules-content" class="p-3 max-h-96 overflow-y-auto">
+						${positiveRules.length > 0 ? `
+							<div class="mb-3">
+								<h4 class="text-xs font-medium text-green-700 mb-2 flex items-center">
+									<span class="mr-1">🌟</span>
+									Earn a star
+								</h4>
+								<div class="space-y-1">
+									${sortRulesByOrder(positiveRules).map(rule => `
+										<div class="flex items-start p-2 bg-green-50 rounded border border-green-200">
+											<div class="flex-shrink-0 w-4 h-4 bg-green-500 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2 mt-0.5">
+												+
+											</div>
+											<p class="text-xs text-gray-800 leading-relaxed">${this.escapeHtml(rule.description)}</p>
+										</div>
+									`).join('')}
+								</div>
+							</div>
+						` : ''}
+
+						${negativeRules.length > 0 ? `
+							<div>
+								<h4 class="text-xs font-medium text-red-700 mb-2 flex items-center">
+									<span class="mr-1">⚠️</span>
+									Lose a star
+								</h4>
+								<div class="space-y-1">
+									${sortRulesByOrder(negativeRules).map(rule => `
+										<div class="flex items-start p-2 bg-red-50 rounded border border-red-200">
+											<div class="flex-shrink-0 w-4 h-4 bg-red-500 text-white rounded-full flex items-center justify-center text-xs font-bold mr-2 mt-0.5">
+												−
+											</div>
+											<p class="text-xs text-gray-800 leading-relaxed">${this.escapeHtml(rule.description)}</p>
+										</div>
+									`).join('')}
+								</div>
+							</div>
+						` : ''}
+					</div>
+				</div>
+			</div>
+		`;
 	}
 
 	private renderStudentCard(student: Student): string {
@@ -234,6 +422,10 @@ class KudosApp {
 		const classNameInput = document.getElementById('class-name') as HTMLInputElement;
 		const newStudentInput = document.getElementById('new-student-name') as HTMLInputElement;
 		const addStudentBtn = document.getElementById('add-student-btn') as HTMLButtonElement;
+		const newPositiveRuleInput = document.getElementById('new-positive-rule') as HTMLInputElement;
+		const addPositiveRuleBtn = document.getElementById('add-positive-rule-btn') as HTMLButtonElement;
+		const newNegativeRuleInput = document.getElementById('new-negative-rule') as HTMLInputElement;
+		const addNegativeRuleBtn = document.getElementById('add-negative-rule-btn') as HTMLButtonElement;
 		const saveStartBtn = document.getElementById('save-and-start-btn') as HTMLButtonElement;
 		const exportBtn = document.getElementById('export-btn') as HTMLButtonElement;
 		const importFile = document.getElementById('import-file') as HTMLInputElement;
@@ -271,7 +463,57 @@ class KudosApp {
 			}
 		});
 
-		// Remove student
+		// Add positive rule
+		const addPositiveRule = () => {
+			const description = newPositiveRuleInput.value.trim();
+			if (description && description.length <= 100) {
+				const rule: Rule = {
+					id: crypto.randomUUID(),
+					description: description,
+					type: 'positive',
+					order: this.state.rules.filter(r => r.type === 'positive').length + 1
+				};
+				this.state.rules.push(rule);
+				newPositiveRuleInput.value = '';
+				this.updateRulesLists();
+				this.saveState();
+			}
+		};
+
+		addPositiveRuleBtn.addEventListener('click', addPositiveRule);
+		newPositiveRuleInput.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				addPositiveRule();
+			}
+		});
+
+		// Add negative rule
+		const addNegativeRule = () => {
+			const description = newNegativeRuleInput.value.trim();
+			if (description && description.length <= 100) {
+				const rule: Rule = {
+					id: crypto.randomUUID(),
+					description: description,
+					type: 'negative',
+					order: this.state.rules.filter(r => r.type === 'negative').length + 1
+				};
+				this.state.rules.push(rule);
+				newNegativeRuleInput.value = '';
+				this.updateRulesLists();
+				this.saveState();
+			}
+		};
+
+		addNegativeRuleBtn.addEventListener('click', addNegativeRule);
+		newNegativeRuleInput.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				addNegativeRule();
+			}
+		});
+
+		// Remove student and rules
 		document.addEventListener('click', (e) => {
 			const target = e.target as HTMLElement;
 			if (target.classList.contains('remove-student-btn')) {
@@ -280,6 +522,13 @@ class KudosApp {
 					this.state.students = this.state.students.filter(s => s.id !== studentId);
 					this.updateStudentList();
 					this.updateSaveButtonState();
+					this.saveState();
+				}
+			} else if (target.classList.contains('remove-rule-btn')) {
+				const ruleId = target.dataset.ruleId;
+				if (ruleId && confirm('Remove this rule?')) {
+					this.state.rules = this.state.rules.filter(r => r.id !== ruleId);
+					this.updateRulesLists();
 					this.saveState();
 				}
 			}
@@ -314,6 +563,7 @@ class KudosApp {
 							if (confirm('This will replace your current class data. Continue?')) {
 								this.state.className = validData.className;
 								this.state.students = validData.students;
+								this.state.rules = validData.rules || [];
 								this.saveState();
 								this.render();
 							}
@@ -337,6 +587,20 @@ class KudosApp {
 			this.saveState();
 			this.render();
 		});
+
+		// Rules toggle functionality
+		const toggleRulesBtn = document.getElementById('toggle-rules-btn');
+		const rulesContent = document.getElementById('rules-content');
+		const toggleRulesText = document.getElementById('toggle-rules-text');
+
+		if (toggleRulesBtn && rulesContent && toggleRulesText) {
+			toggleRulesBtn.addEventListener('click', () => {
+				const isHidden = rulesContent.style.display === 'none';
+				rulesContent.style.display = isHidden ? 'block' : 'none';
+				toggleRulesText.textContent = isHidden ? 'Hide' : 'Show';
+				toggleRulesBtn.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+			});
+		}
 
 		// Student card interactions
 		document.querySelectorAll('.student-card').forEach(card => {
@@ -458,6 +722,18 @@ class KudosApp {
 		const studentListElement = document.getElementById('student-list');
 		if (studentListElement) {
 			studentListElement.innerHTML = this.renderStudentList();
+		}
+	}
+
+	private updateRulesLists(): void {
+		const positiveRulesElement = document.getElementById('positive-rules-list');
+		const negativeRulesElement = document.getElementById('negative-rules-list');
+
+		if (positiveRulesElement) {
+			positiveRulesElement.innerHTML = this.renderPositiveRulesList();
+		}
+		if (negativeRulesElement) {
+			negativeRulesElement.innerHTML = this.renderNegativeRulesList();
 		}
 	}
 
