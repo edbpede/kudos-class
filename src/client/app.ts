@@ -727,11 +727,12 @@ class KudosApp {
 
 			// Keyboard navigation
 			card.addEventListener('keydown', (e) => {
-				if (e.key === 'Enter' || e.key === ' ') {
-					e.preventDefault();
+				const keyEvent = e as KeyboardEvent;
+				if (keyEvent.key === 'Enter' || keyEvent.key === ' ') {
+					keyEvent.preventDefault();
 					addStar();
-				} else if (e.key === 'Backspace' || e.key === 'Delete') {
-					e.preventDefault();
+				} else if (keyEvent.key === 'Backspace' || keyEvent.key === 'Delete') {
+					keyEvent.preventDefault();
 					removeStar();
 				}
 			});
