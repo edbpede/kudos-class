@@ -1,4 +1,4 @@
-import type { AppState, ImportExportData } from '../types';
+import type { AppState, ImportExportData, Student } from '../types';
 
 const STORAGE_KEY = 'kudos-class-app-state';
 
@@ -32,7 +32,7 @@ export function saveAppState(state: AppState): void {
 export function exportAppData(state: AppState): ImportExportData {
   return {
     className: state.className,
-    students: state.students,
+    students: sortStudentsAlphabetically(state.students),
     exportDate: new Date().toISOString(),
     version: '1.0'
   };
@@ -79,4 +79,18 @@ export function downloadJSON(data: ImportExportData, filename: string): void {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+}
+
+export function sortStudentsAlphabetically(students: Student[]): Student[] {
+  // Create a collator specifically for Danish alphabet order
+  // In Danish: A-Z, then Æ, Ø, Å at the end
+  const collator = new Intl.Collator('da-DK', {
+    sensitivity: 'accent', // Case-insensitive but respects accents for proper Danish ordering
+    numeric: false,
+    ignorePunctuation: false,
+    caseFirst: 'lower'
+  });
+
+  // Create a copy of the array to avoid mutating the original
+  return [...students].sort((a, b) => collator.compare(a.name, b.name));
 }

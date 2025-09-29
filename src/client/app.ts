@@ -1,5 +1,5 @@
 import type { AppState, Student } from '../types';
-import { loadAppState, saveAppState, exportAppData, validateImportData, downloadJSON } from '../utils/storage';
+import { loadAppState, saveAppState, exportAppData, validateImportData, downloadJSON, sortStudentsAlphabetically } from '../utils/storage';
 
 class KudosApp {
 	private state: AppState;
@@ -129,7 +129,8 @@ class KudosApp {
 			return '<p class="text-gray-500 text-center py-4 border-2 border-dashed border-gray-200 rounded-lg">No students added yet. Add students using the form above.</p>';
 		}
 
-		return this.state.students.map(student => `
+		const sortedStudents = sortStudentsAlphabetically(this.state.students);
+		return sortedStudents.map(student => `
 			<div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
 				<span class="font-medium text-gray-800">${this.escapeHtml(student.name)}</span>
 				<button
@@ -171,7 +172,7 @@ class KudosApp {
 				</header>
 
 				<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-					${this.state.students.map(student => this.renderStudentCard(student)).join('')}
+					${sortStudentsAlphabetically(this.state.students).map(student => this.renderStudentCard(student)).join('')}
 				</div>
 
 				<div class="mt-8 text-center">
