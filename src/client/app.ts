@@ -51,7 +51,10 @@ class KudosApp {
 					<div class="flex justify-end mb-4">
 						<div id="language-switcher-setup"></div>
 					</div>
-					<h1 class="text-4xl font-bold text-gray-800 mb-2">🌟 ${t('setup.title', this.currentLocale)}</h1>
+					<div class="flex items-center justify-center gap-3 mb-2">
+						<img src="/favicon.svg" alt="" class="w-8 h-8 opacity-60" aria-hidden="true" />
+						<h1 class="text-4xl font-bold text-gray-800">${t('setup.title', this.currentLocale)}</h1>
+					</div>
 					<p class="text-gray-600">${t('setup.subtitle', this.currentLocale)}</p>
 					<div class="mt-4 px-4 py-2 bg-blue-100 text-blue-800 rounded-lg inline-block">
 						<span class="font-medium">${t('modes.setup', this.currentLocale)}</span>
@@ -311,7 +314,10 @@ class KudosApp {
 						</div>
 						<div id="language-switcher-awarding"></div>
 					</div>
-					<h1 class="text-3xl font-bold text-gray-800 mb-2">${this.escapeHtml(this.state.className)}</h1>
+					<div class="flex items-center justify-center gap-3 mb-2">
+						<img src="/favicon.svg" alt="" class="w-7 h-7 opacity-50" aria-hidden="true" />
+						<h1 class="text-3xl font-bold text-gray-800">${this.escapeHtml(this.state.className)}</h1>
+					</div>
 					<div class="flex items-center justify-center gap-6 text-sm text-gray-600">
 						<span>${studentCount} ${studentLabel}</span>
 						<span>⭐ ${totalStars} ${t('awarding.stats.totalStars', this.currentLocale)}</span>
