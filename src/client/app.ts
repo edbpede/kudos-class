@@ -1,18 +1,34 @@
 import type { AppState, Student, Rule } from '../types';
 import { loadAppState, saveAppState, exportAppData, validateImportData, downloadJSON, sortStudentsAlphabetically, sortRulesByOrder, defaultAppState } from '../utils/storage';
+import { initI18n, getCurrentLocale, t, type Locale } from '../i18n/utils';
+import { createLanguageSwitcher } from '../components/LanguageSwitcher';
 
 class KudosApp {
 	private state: AppState;
 	private appContainer: HTMLElement;
+	private currentLocale: Locale;
 
 	constructor() {
 		this.state = loadAppState();
 		this.appContainer = document.getElementById('app')!;
+		this.currentLocale = getCurrentLocale();
 		this.init();
 	}
 
-	private init(): void {
+	private async init(): Promise<void> {
+		await initI18n();
 		this.render();
+		this.setupLanguageChangeListener();
+	}
+
+	private setupLanguageChangeListener(): void {
+		window.addEventListener('languagechange', ((e: CustomEvent) => {
+			this.currentLocale = e.detail.locale;
+			// Update HTML lang attribute
+			document.documentElement.lang = this.currentLocale;
+			// Re-render the app with new translations
+			this.render();
+		}) as EventListener);
 	}
 
 	private render(): void {
@@ -32,10 +48,13 @@ class KudosApp {
 		this.appContainer.innerHTML = `
 			<div class="container mx-auto px-4 py-8 max-w-2xl">
 				<header class="text-center mb-8">
-					<h1 class="text-4xl font-bold text-gray-800 mb-2">🌟 Kudos Class</h1>
-					<p class="text-gray-600">Set up your class and start rewarding great behavior!</p>
+					<div class="flex justify-end mb-4">
+						<div id="language-switcher-setup"></div>
+					</div>
+					<h1 class="text-4xl font-bold text-gray-800 mb-2">🌟 ${t('setup.title', this.currentLocale)}</h1>
+					<p class="text-gray-600">${t('setup.subtitle', this.currentLocale)}</p>
 					<div class="mt-4 px-4 py-2 bg-blue-100 text-blue-800 rounded-lg inline-block">
-						<span class="font-medium">Setup Mode</span>
+						<span class="font-medium">${t('modes.setup', this.currentLocale)}</span>
 					</div>
 				</header>
 
@@ -43,41 +62,41 @@ class KudosApp {
 					<form id="setup-form" class="space-y-6">
 						<div>
 							<label for="class-name" class="block text-sm font-medium text-gray-700 mb-2">
-								Class/Grade Name *
+								${t('setup.className.label', this.currentLocale)} *
 							</label>
 							<input
 								type="text"
 								id="class-name"
 								name="className"
 								value="${this.state.className}"
-								placeholder="e.g., Ms. Smith's 3rd Grade"
+								placeholder="${t('setup.className.placeholder', this.currentLocale)}"
 								class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
 								required
 								aria-describedby="class-name-help"
 							>
-							<p id="class-name-help" class="mt-1 text-sm text-gray-500">Enter your class or grade name</p>
+							<p id="class-name-help" class="mt-1 text-sm text-gray-500">${t('setup.className.help', this.currentLocale)}</p>
 						</div>
 
 						<div>
 							<label class="block text-sm font-medium text-gray-700 mb-4">
-								Students in Your Class
+								${t('setup.students.label', this.currentLocale)}
 							</label>
 							<div class="space-y-3">
 								<div class="flex gap-2">
 									<input
 										type="text"
 										id="new-student-name"
-										placeholder="Enter student name"
+										placeholder="${t('setup.students.placeholder', this.currentLocale)}"
 										class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
-										aria-label="New student name"
+										aria-label="${t('setup.students.placeholder', this.currentLocale)}"
 									>
 									<button
 										type="button"
 										id="add-student-btn"
 										class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-										aria-label="Add student"
+										aria-label="${t('setup.students.addButton', this.currentLocale)}"
 									>
-										Add
+										${t('setup.students.addButton', this.currentLocale)}
 									</button>
 								</div>
 								<div id="student-list" class="space-y-2">
@@ -88,32 +107,32 @@ class KudosApp {
 
 						<div>
 							<label class="block text-sm font-medium text-gray-700 mb-4">
-								Classroom Rules
+								${t('setup.rules.label', this.currentLocale)}
 							</label>
-							<p class="text-sm text-gray-600 mb-4">Set clear expectations for your students. These will be displayed during awarding mode.</p>
+							<p class="text-sm text-gray-600 mb-4">${t('setup.rules.description', this.currentLocale)}</p>
 
 							<!-- Positive Rules Section -->
 							<div class="mb-6">
 								<h4 class="text-sm font-semibold text-green-700 mb-3 flex items-center">
-									<span class="mr-2">⭐</span> Actions that earn a star
+									<span class="mr-2">⭐</span> ${t('setup.rules.positive.title', this.currentLocale)}
 								</h4>
 								<div class="space-y-3">
 									<div class="flex gap-2">
 										<input
 											type="text"
 											id="new-positive-rule"
-											placeholder="e.g., Raising hand before speaking"
+											placeholder="${t('setup.rules.positive.placeholder', this.currentLocale)}"
 											class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent transition-colors"
-											aria-label="New positive rule"
+											aria-label="${t('setup.rules.positive.placeholder', this.currentLocale)}"
 											maxlength="100"
 										>
 										<button
 											type="button"
 											id="add-positive-rule-btn"
 											class="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-											aria-label="Add positive rule"
+											aria-label="${t('setup.rules.positive.addButton', this.currentLocale)}"
 										>
-											Add
+											${t('setup.rules.positive.addButton', this.currentLocale)}
 										</button>
 									</div>
 									<div id="positive-rules-list" class="space-y-2">
@@ -125,25 +144,25 @@ class KudosApp {
 							<!-- Negative Rules Section -->
 							<div class="mb-6">
 								<h4 class="text-sm font-semibold text-red-700 mb-3 flex items-center">
-									<span class="mr-2">⭐</span> Actions that lose a star
+									<span class="mr-2">⭐</span> ${t('setup.rules.negative.title', this.currentLocale)}
 								</h4>
 								<div class="space-y-3">
 									<div class="flex gap-2">
 										<input
 											type="text"
 											id="new-negative-rule"
-											placeholder="e.g., Talking without permission"
+											placeholder="${t('setup.rules.negative.placeholder', this.currentLocale)}"
 											class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent transition-colors"
-											aria-label="New negative rule"
+											aria-label="${t('setup.rules.negative.placeholder', this.currentLocale)}"
 											maxlength="100"
 										>
 										<button
 											type="button"
 											id="add-negative-rule-btn"
 											class="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-											aria-label="Add negative rule"
+											aria-label="${t('setup.rules.negative.addButton', this.currentLocale)}"
 										>
-											Add
+											${t('setup.rules.negative.addButton', this.currentLocale)}
 										</button>
 									</div>
 									<div id="negative-rules-list" class="space-y-2">
@@ -160,19 +179,19 @@ class KudosApp {
 								class="flex-1 px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
 								${this.state.students.length === 0 || !this.state.className.trim() ? 'disabled' : ''}
 							>
-								Save and Start Awarding ⭐
+								${t('setup.buttons.saveAndStart', this.currentLocale)}
 							</button>
 							<button
 								type="button"
 								id="reset-btn"
 								class="px-8 py-4 border-2 border-red-500 text-red-600 rounded-lg hover:bg-red-50 hover:border-red-600 transition-colors focus:ring-2 focus:ring-red-500 focus:ring-offset-2 font-medium"
 							>
-								🔄 Reset All Data
+								${t('setup.buttons.resetAll', this.currentLocale)}
 							</button>
 						</div>
 
 						<div class="border-t pt-6 space-y-3">
-							<h3 class="text-sm font-medium text-gray-700">Import/Export Data</h3>
+							<h3 class="text-sm font-medium text-gray-700">${t('setup.importExport.title', this.currentLocale)}</h3>
 							<div class="flex flex-col sm:flex-row gap-3">
 								<button
 									type="button"
@@ -180,12 +199,12 @@ class KudosApp {
 									class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
 									disabled="${this.state.students.length === 0}"
 								>
-									📤 Export Data
+									${t('setup.buttons.export', this.currentLocale)}
 								</button>
 								<label class="flex-1">
-									<input type="file" id="import-file" accept=".json" class="hidden" aria-label="Import data file">
+									<input type="file" id="import-file" accept=".json" class="hidden" aria-label="${t('setup.buttons.import', this.currentLocale)}">
 									<span class="block w-full px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer text-center focus-within:ring-2 focus-within:ring-gray-500 focus-within:ring-offset-2">
-										📥 Import Data
+										${t('setup.buttons.import', this.currentLocale)}
 									</span>
 								</label>
 							</div>
@@ -196,11 +215,13 @@ class KudosApp {
 		`;
 
 		this.attachSetupModeListeners();
+		// Initialize language switcher
+		createLanguageSwitcher('language-switcher-setup');
 	}
 
 	private renderStudentList(): string {
 		if (this.state.students.length === 0) {
-			return '<p class="text-gray-500 text-center py-4 border-2 border-dashed border-gray-200 rounded-lg">No students added yet. Add students using the form above.</p>';
+			return `<p class="text-gray-500 text-center py-4 border-2 border-dashed border-gray-200 rounded-lg">${t('setup.students.noStudents', this.currentLocale)}</p>`;
 		}
 
 		const sortedStudents = sortStudentsAlphabetically(this.state.students);
@@ -211,9 +232,9 @@ class KudosApp {
 					type="button"
 					class="remove-student-btn px-3 py-1 text-red-600 hover:bg-red-50 rounded transition-colors focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
 					data-student-id="${student.id}"
-					aria-label="Remove ${this.escapeHtml(student.name)}"
+					aria-label="${t('setup.students.removeButton', this.currentLocale)} ${this.escapeHtml(student.name)}"
 				>
-					Remove
+					${t('setup.students.removeButton', this.currentLocale)}
 				</button>
 			</div>
 		`).join('');
@@ -222,7 +243,7 @@ class KudosApp {
 	private renderPositiveRulesList(): string {
 		const positiveRules = this.state.rules.filter(rule => rule.type === 'positive');
 		if (positiveRules.length === 0) {
-			return '<p class="text-gray-500 text-center py-4 border-2 border-dashed border-gray-200 rounded-lg">No positive rules added yet. Add rules to encourage good behavior.</p>';
+			return `<p class="text-gray-500 text-center py-4 border-2 border-dashed border-gray-200 rounded-lg">${t('setup.rules.positive.noRules', this.currentLocale)}</p>`;
 		}
 
 		const sortedRules = sortRulesByOrder(positiveRules);
@@ -236,9 +257,9 @@ class KudosApp {
 					type="button"
 					class="remove-rule-btn px-3 py-1 text-red-600 hover:bg-red-50 rounded transition-colors focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
 					data-rule-id="${rule.id}"
-					aria-label="Remove rule: ${this.escapeHtml(rule.description)}"
+					aria-label="${t('setup.rules.removeButton', this.currentLocale)}: ${this.escapeHtml(rule.description)}"
 				>
-					Remove
+					${t('setup.rules.removeButton', this.currentLocale)}
 				</button>
 			</div>
 		`).join('');
@@ -247,7 +268,7 @@ class KudosApp {
 	private renderNegativeRulesList(): string {
 		const negativeRules = this.state.rules.filter(rule => rule.type === 'negative');
 		if (negativeRules.length === 0) {
-			return '<p class="text-gray-500 text-center py-4 border-2 border-dashed border-gray-200 rounded-lg">No negative rules added yet. Add rules to discourage unwanted behavior.</p>';
+			return `<p class="text-gray-500 text-center py-4 border-2 border-dashed border-gray-200 rounded-lg">${t('setup.rules.negative.noRules', this.currentLocale)}</p>`;
 		}
 
 		const sortedRules = sortRulesByOrder(negativeRules);
@@ -261,9 +282,9 @@ class KudosApp {
 					type="button"
 					class="remove-rule-btn px-3 py-1 text-red-600 hover:bg-red-50 rounded transition-colors focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
 					data-rule-id="${rule.id}"
-					aria-label="Remove rule: ${this.escapeHtml(rule.description)}"
+					aria-label="${t('setup.rules.removeButton', this.currentLocale)}: ${this.escapeHtml(rule.description)}"
 				>
-					Remove
+					${t('setup.rules.removeButton', this.currentLocale)}
 				</button>
 			</div>
 		`).join('');
@@ -272,6 +293,7 @@ class KudosApp {
 	private renderAwardingMode(): void {
 		const studentCount = this.state.students.length;
 		const totalStars = this.state.students.reduce((sum, student) => sum + student.stars, 0);
+		const studentLabel = studentCount !== 1 ? t('awarding.stats.students', this.currentLocale) : t('awarding.stats.student', this.currentLocale);
 
 		this.appContainer.innerHTML = `
 			<div class="container mx-auto px-4 py-6 max-w-7xl">
@@ -280,18 +302,19 @@ class KudosApp {
 						<button
 							id="back-to-setup-btn"
 							class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-							aria-label="Return to setup mode"
+							aria-label="${t('awarding.backButton', this.currentLocale)}"
 						>
-							← Back to Setup
+							${t('awarding.backButton', this.currentLocale)}
 						</button>
 						<div class="px-4 py-2 bg-green-100 text-green-800 rounded-lg">
-							<span class="font-medium">Awarding Mode</span>
+							<span class="font-medium">${t('modes.awarding', this.currentLocale)}</span>
 						</div>
+						<div id="language-switcher-awarding"></div>
 					</div>
 					<h1 class="text-3xl font-bold text-gray-800 mb-2">${this.escapeHtml(this.state.className)}</h1>
 					<div class="flex items-center justify-center gap-6 text-sm text-gray-600">
-						<span>${studentCount} student${studentCount !== 1 ? 's' : ''}</span>
-						<span>⭐ ${totalStars} total stars awarded</span>
+						<span>${studentCount} ${studentLabel}</span>
+						<span>⭐ ${totalStars} ${t('awarding.stats.totalStars', this.currentLocale)}</span>
 					</div>
 				</header>
 
@@ -308,10 +331,10 @@ class KudosApp {
 						<!-- Instructions section -->
 						<div class="mt-8 text-center">
 							<div class="inline-block p-4 bg-blue-50 rounded-lg">
-								<p class="text-sm text-blue-800 mb-2"><strong>How to use:</strong></p>
-								<p class="text-sm text-blue-700">• Tap student name to add a star (max 4)</p>
-								<p class="text-sm text-blue-700">• Right-click to remove a star</p>
-								<p class="text-sm text-blue-700">• Hover over student cards for +/- controls</p>
+								<p class="text-sm text-blue-800 mb-2"><strong>${t('awarding.instructions.title', this.currentLocale)}</strong></p>
+								<p class="text-sm text-blue-700">${t('awarding.instructions.tap', this.currentLocale)}</p>
+								<p class="text-sm text-blue-700">${t('awarding.instructions.rightClick', this.currentLocale)}</p>
+								<p class="text-sm text-blue-700">${t('awarding.instructions.hover', this.currentLocale)}</p>
 							</div>
 						</div>
 					</div>
@@ -325,6 +348,8 @@ class KudosApp {
 		`;
 
 		this.attachAwardingModeListeners();
+		// Initialize language switcher
+		createLanguageSwitcher('language-switcher-awarding');
 	}
 
 	private renderRulesDisplay(): string {
@@ -334,6 +359,8 @@ class KudosApp {
 
 		const positiveRules = this.state.rules.filter(rule => rule.type === 'positive');
 		const negativeRules = this.state.rules.filter(rule => rule.type === 'negative');
+		const totalRules = positiveRules.length + negativeRules.length;
+		const ruleLabel = totalRules !== 1 ? t('awarding.rules.subtitle', this.currentLocale) : t('awarding.rules.rule', this.currentLocale);
 
 		return `
 			<!-- Mobile Rules Banner (visible only on mobile/tablet) -->
@@ -342,15 +369,15 @@ class KudosApp {
 					<button
 						id="toggle-mobile-rules-btn"
 						class="w-full px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100 hover:from-blue-100 hover:to-indigo-100 transition-all duration-200 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-						aria-label="Toggle classroom rules"
+						aria-label="${t('awarding.rules.title', this.currentLocale)}"
 						aria-expanded="false"
 					>
 						<div class="flex items-center justify-between">
 							<div class="flex items-center">
 								<span class="text-lg mr-3">📋</span>
 								<div class="text-left">
-									<h3 class="text-sm font-semibold text-gray-800">Classroom Rules</h3>
-									<p class="text-xs text-gray-500">${positiveRules.length + negativeRules.length} rule${positiveRules.length + negativeRules.length !== 1 ? 's' : ''} • Tap to view</p>
+									<h3 class="text-sm font-semibold text-gray-800">${t('awarding.rules.title', this.currentLocale)}</h3>
+									<p class="text-xs text-gray-500">${totalRules} ${ruleLabel} • ${t('awarding.rules.toggleButton', this.currentLocale)}</p>
 								</div>
 							</div>
 							<div class="flex items-center">
@@ -380,6 +407,8 @@ class KudosApp {
 
 		const positiveRules = this.state.rules.filter(rule => rule.type === 'positive');
 		const negativeRules = this.state.rules.filter(rule => rule.type === 'negative');
+		const totalRules = positiveRules.length + negativeRules.length;
+		const ruleLabel = totalRules !== 1 ? t('awarding.rules.subtitle', this.currentLocale) : t('awarding.rules.rule', this.currentLocale);
 
 		return `
 			<div class="sticky top-6">
@@ -387,9 +416,9 @@ class KudosApp {
 					<div class="px-4 py-3 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100">
 						<h3 class="text-sm font-semibold text-gray-800 flex items-center">
 							<span class="text-lg mr-2">📋</span>
-							Classroom Rules
+							${t('awarding.rules.title', this.currentLocale)}
 						</h3>
-						<p class="text-xs text-gray-500 mt-1">${positiveRules.length + negativeRules.length} rule${positiveRules.length + negativeRules.length !== 1 ? 's' : ''} to guide behavior</p>
+						<p class="text-xs text-gray-500 mt-1">${totalRules} ${ruleLabel}</p>
 					</div>
 
 					<div class="p-4 max-h-[calc(100vh-200px)] overflow-y-auto">
@@ -406,7 +435,7 @@ class KudosApp {
 				<div class="mb-4">
 					<h4 class="text-sm font-medium text-emerald-700 mb-3 flex items-center">
 						<span class="mr-2 text-base">🌟</span>
-						Actions that earn a star
+						${t('awarding.rules.positive', this.currentLocale)}
 					</h4>
 					<div class="space-y-2">
 						${sortRulesByOrder(positiveRules).map((rule, index) => `
@@ -425,7 +454,7 @@ class KudosApp {
 				<div>
 					<h4 class="text-sm font-medium text-red-700 mb-3 flex items-center">
 						<span class="mr-2 text-base">⚠️</span>
-						Actions that lose a star
+						${t('awarding.rules.negative', this.currentLocale)}
 					</h4>
 					<div class="space-y-2">
 						${sortRulesByOrder(negativeRules).map((rule, index) => `
@@ -444,6 +473,7 @@ class KudosApp {
 
 	private renderStudentCard(student: Student): string {
 		const stars = '⭐'.repeat(student.stars) + '☆'.repeat(4 - student.stars);
+		const starsLabel = student.stars !== 1 ? t('awarding.studentCard.stars', this.currentLocale) : t('awarding.studentCard.stars', this.currentLocale);
 
 		return `
 			<div
@@ -451,14 +481,14 @@ class KudosApp {
 				data-student-id="${student.id}"
 				role="button"
 				tabindex="0"
-				aria-label="${this.escapeHtml(student.name)} has ${student.stars} star${student.stars !== 1 ? 's' : ''}. Click to add a star, right-click to remove a star."
+				aria-label="${this.escapeHtml(student.name)} ${student.stars} ${t('awarding.studentCard.ariaLabel', this.currentLocale)}"
 			>
 				<!-- Hover Controls -->
 				<div class="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
 					<button
 						class="hover-control add-star-btn w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg transition-colors duration-150"
 						data-student-id="${student.id}"
-						aria-label="Add star to ${this.escapeHtml(student.name)}"
+						aria-label="${t('awarding.studentCard.addStar', this.currentLocale)} ${this.escapeHtml(student.name)}"
 						${student.stars >= 4 ? 'disabled' : ''}
 					>
 						+
@@ -466,7 +496,7 @@ class KudosApp {
 					<button
 						class="hover-control remove-star-btn w-8 h-8 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg transition-colors duration-150"
 						data-student-id="${student.id}"
-						aria-label="Remove star from ${this.escapeHtml(student.name)}"
+						aria-label="${t('awarding.studentCard.removeStar', this.currentLocale)} ${this.escapeHtml(student.name)}"
 						${student.stars <= 0 ? 'disabled' : ''}
 					>
 						−
@@ -476,7 +506,7 @@ class KudosApp {
 				<div class="text-center">
 					<h3 class="text-lg font-semibold text-gray-800 mb-3">${this.escapeHtml(student.name)}</h3>
 					<div class="text-3xl mb-2" aria-hidden="true">${stars}</div>
-					<p class="text-sm text-gray-600">${student.stars}/4 stars</p>
+					<p class="text-sm text-gray-600">${student.stars}/4 ${starsLabel}</p>
 				</div>
 			</div>
 		`;
@@ -584,7 +614,7 @@ class KudosApp {
 			const target = e.target as HTMLElement;
 			if (target.classList.contains('remove-student-btn')) {
 				const studentId = target.dataset.studentId;
-				if (studentId && confirm('Remove this student from the class?')) {
+				if (studentId && confirm(t('setup.students.removeConfirm', this.currentLocale))) {
 					this.state.students = this.state.students.filter(s => s.id !== studentId);
 					this.updateStudentList();
 					this.updateSaveButtonState();
@@ -592,7 +622,7 @@ class KudosApp {
 				}
 			} else if (target.classList.contains('remove-rule-btn')) {
 				const ruleId = target.dataset.ruleId;
-				if (ruleId && confirm('Remove this rule?')) {
+				if (ruleId && confirm(t('setup.rules.removeConfirm', this.currentLocale))) {
 					this.state.rules = this.state.rules.filter(r => r.id !== ruleId);
 					this.updateRulesLists();
 					this.saveState();
@@ -631,7 +661,7 @@ class KudosApp {
 						const data = JSON.parse(event.target?.result as string);
 						const validData = validateImportData(data);
 						if (validData) {
-							if (confirm('This will replace your current class data. Continue?')) {
+							if (confirm(t('setup.importExport.importConfirm', this.currentLocale))) {
 								this.state.className = validData.className;
 								this.state.students = validData.students;
 								this.state.rules = validData.rules || [];
@@ -639,10 +669,10 @@ class KudosApp {
 								this.render();
 							}
 						} else {
-							alert('Invalid import file. Please check the file format.');
+							alert(t('setup.importExport.importError', this.currentLocale));
 						}
 					} catch (error) {
-						alert('Error reading import file. Please check the file format.');
+						alert(t('setup.importExport.importReadError', this.currentLocale));
 					}
 				};
 				reader.readAsText(file);
@@ -788,11 +818,12 @@ class KudosApp {
 			const stars = '⭐'.repeat(student.stars) + '☆'.repeat(4 - student.stars);
 			const starsElement = card.querySelector('.text-3xl');
 			const countElement = card.querySelector('.text-center .text-sm');
+			const starsLabel = t('awarding.studentCard.stars', this.currentLocale);
 
 			if (starsElement) starsElement.textContent = stars;
-			if (countElement) countElement.textContent = `${student.stars}/4 stars`;
+			if (countElement) countElement.textContent = `${student.stars}/4 ${starsLabel}`;
 
-			card.setAttribute('aria-label', `${student.name} has ${student.stars} star${student.stars !== 1 ? 's' : ''}. Click to add a star, right-click to remove a star.`);
+			card.setAttribute('aria-label', `${student.name} ${student.stars} ${t('awarding.studentCard.ariaLabel', this.currentLocale)}`);
 
 			// Update hover control button states
 			const addBtn = card.querySelector('.add-star-btn') as HTMLButtonElement;
@@ -816,9 +847,11 @@ class KudosApp {
 
 		// Update header stats
 		const totalStars = this.state.students.reduce((sum, s) => sum + s.stars, 0);
+		const studentCount = this.state.students.length;
+		const studentLabel = studentCount !== 1 ? t('awarding.stats.students', this.currentLocale) : t('awarding.stats.student', this.currentLocale);
 		const statsElement = document.querySelector('.text-gray-600');
 		if (statsElement) {
-			statsElement.innerHTML = `<span>${this.state.students.length} student${this.state.students.length !== 1 ? 's' : ''}</span><span>⭐ ${totalStars} total stars awarded</span>`;
+			statsElement.innerHTML = `<span>${studentCount} ${studentLabel}</span><span>⭐ ${totalStars} ${t('awarding.stats.totalStars', this.currentLocale)}</span>`;
 		}
 	}
 
@@ -858,7 +891,7 @@ class KudosApp {
 		return this.state.className.trim().length > 0 && this.state.students.length > 0;
 	}
 
-	private showConfirmationDialog(message: string, confirmButtonText: string = 'Confirm'): Promise<boolean> {
+	private showConfirmationDialog(message: string, confirmButtonText: string = t('setup.reset.confirmButton', this.currentLocale)): Promise<boolean> {
 		return new Promise((resolve) => {
 			const overlay = document.createElement('div');
 			overlay.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
@@ -868,7 +901,7 @@ class KudosApp {
 				<div class="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full mx-4 transform scale-95 opacity-0 transition-all duration-200" id="confirmation-modal">
 					<div class="text-center mb-6">
 						<div class="text-red-500 text-4xl mb-3">⚠️</div>
-						<h3 class="text-lg font-semibold text-gray-800 mb-2">Confirm Reset</h3>
+						<h3 class="text-lg font-semibold text-gray-800 mb-2">${t('setup.reset.confirmTitle', this.currentLocale)}</h3>
 						<p class="text-gray-600">${message}</p>
 					</div>
 					<div class="flex gap-3">
@@ -876,7 +909,7 @@ class KudosApp {
 							id="confirm-cancel-btn"
 							class="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
 						>
-							Cancel
+							${t('setup.reset.cancelButton', this.currentLocale)}
 						</button>
 						<button
 							id="confirm-yes-btn"
@@ -928,14 +961,14 @@ class KudosApp {
 
 	private async resetAllData(): Promise<void> {
 		const confirmed = await this.showConfirmationDialog(
-			'Are you sure you want to reset all data? This will clear your class name, students, and rules. This action cannot be undone.',
-			'Yes, Reset All'
+			t('setup.reset.confirmMessage', this.currentLocale),
+			t('setup.reset.confirmButton', this.currentLocale)
 		);
 
 		if (confirmed) {
 			this.state = { ...defaultAppState };
 			this.saveState();
-			this.showSuccessMessage('All data has been reset successfully!');
+			this.showSuccessMessage(t('setup.reset.successMessage', this.currentLocale));
 			this.render();
 		}
 	}
