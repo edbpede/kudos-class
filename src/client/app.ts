@@ -158,7 +158,7 @@ class KudosApp {
 								type="submit"
 								id="save-and-start-btn"
 								class="flex-1 px-8 py-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-								disabled="${this.state.students.length === 0 || !this.state.className.trim()}"
+								${this.state.students.length === 0 || !this.state.className.trim() ? 'disabled' : ''}
 							>
 								Save and Start Awarding ⭐
 							</button>
@@ -648,6 +648,9 @@ class KudosApp {
 				reader.readAsText(file);
 			}
 		});
+
+		// Ensure button state is correct when setup mode is first rendered
+		this.updateSaveButtonState();
 	}
 
 	private attachAwardingModeListeners(): void {
