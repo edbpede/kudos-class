@@ -1,7 +1,7 @@
 export interface Student {
   id: string;
   name: string;
-  stars: number; // 0-4 stars
+  stars: number; // 0-5 stars
 }
 
 export interface Rule {

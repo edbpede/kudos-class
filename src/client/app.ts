@@ -2,6 +2,7 @@ import type { AppState, Student, Rule } from '../types';
 import { loadAppState, saveAppState, exportAppData, validateImportData, downloadJSON, sortStudentsAlphabetically, sortRulesByOrder, defaultAppState } from '../utils/storage';
 import { initI18n, getCurrentLocale, t, type Locale } from '../i18n/utils';
 import { createLanguageSwitcher } from '../components/LanguageSwitcher';
+import { DEFAULT_STUDENT_STARS, MAX_STARS_PER_STUDENT } from '../constants';
 
 class KudosApp {
 	private state: AppState;
@@ -297,9 +298,12 @@ class KudosApp {
 		const studentCount = this.state.students.length;
 		const totalStars = this.state.students.reduce((sum, student) => sum + student.stars, 0);
 		const studentLabel = studentCount !== 1 ? t('awarding.stats.students', this.currentLocale) : t('awarding.stats.student', this.currentLocale);
+		const hasRules = this.state.rules.length > 0;
+		const contentGridClass = hasRules ? 'grid gap-6 lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_360px]' : '';
+		const studentGridClass = 'grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(11rem,1fr))]';
 
 		this.appContainer.innerHTML = `
-			<div class="container mx-auto px-4 py-6 max-w-7xl">
+			<div class="container mx-auto px-4 py-6 max-w-screen-2xl">
 				<header class="text-center mb-6">
 					<div class="flex items-center justify-center gap-4 mb-4">
 						<button
@@ -327,10 +331,10 @@ class KudosApp {
 				${this.renderRulesDisplay()}
 
 				<!-- Main content area with responsive grid -->
-				<div class="grid gap-6 lg:grid-cols-[1fr_320px] xl:grid-cols-[1fr_360px]">
+				<div class="${contentGridClass}">
 					<!-- Student cards section -->
 					<div class="order-2 lg:order-1">
-						<div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+						<div class="${studentGridClass}">
 							${sortStudentsAlphabetically(this.state.students).map(student => this.renderStudentCard(student)).join('')}
 						</div>
 
@@ -346,7 +350,7 @@ class KudosApp {
 					</div>
 
 					<!-- Rules sidebar (hidden on mobile, visible on larger screens) -->
-					<div class="order-1 lg:order-2 hidden lg:block">
+					<div class="order-1 lg:order-2 hidden lg:block ${hasRules ? '' : 'lg:hidden'}">
 						${this.renderRulesSidebar()}
 					</div>
 				</div>
@@ -478,12 +482,12 @@ class KudosApp {
 	}
 
 	private renderStudentCard(student: Student): string {
-		const stars = '⭐'.repeat(student.stars) + '☆'.repeat(4 - student.stars);
+		const stars = '⭐'.repeat(student.stars) + '☆'.repeat(MAX_STARS_PER_STUDENT - student.stars);
 		const starsLabel = student.stars !== 1 ? t('awarding.studentCard.stars', this.currentLocale) : t('awarding.studentCard.stars', this.currentLocale);
 
 		return `
 			<div
-				class="student-card bg-white rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-200 cursor-pointer border-2 border-transparent hover:border-blue-200 transform hover:-translate-y-1 relative group"
+				class="student-card bg-white rounded-xl shadow-lg p-4 sm:p-5 hover:shadow-xl transition-all duration-200 cursor-pointer border-2 border-transparent hover:border-blue-200 transform hover:-translate-y-1 relative group"
 				data-student-id="${student.id}"
 				role="button"
 				tabindex="0"
@@ -495,7 +499,7 @@ class KudosApp {
 						class="hover-control add-star-btn w-8 h-8 bg-green-500 hover:bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-bold shadow-lg transition-colors duration-150"
 						data-student-id="${student.id}"
 						aria-label="${t('awarding.studentCard.addStar', this.currentLocale)} ${this.escapeHtml(student.name)}"
-						${student.stars >= 4 ? 'disabled' : ''}
+						${student.stars >= MAX_STARS_PER_STUDENT ? 'disabled' : ''}
 					>
 						+
 					</button>
@@ -511,8 +515,8 @@ class KudosApp {
 
 				<div class="text-center">
 					<h3 class="text-lg font-semibold text-gray-800 mb-3">${this.escapeHtml(student.name)}</h3>
-					<div class="text-3xl mb-2" aria-hidden="true">${stars}</div>
-					<p class="text-sm text-gray-600">${student.stars}/4 ${starsLabel}</p>
+					<div class="text-2xl xl:text-3xl mb-2" aria-hidden="true">${stars}</div>
+					<p class="text-sm text-gray-600">${student.stars}/${MAX_STARS_PER_STUDENT} ${starsLabel}</p>
 				</div>
 			</div>
 		`;
@@ -547,9 +551,9 @@ class KudosApp {
 				const student: Student = {
 					id: crypto.randomUUID(),
 					name: name,
-					stars: 0
+					stars: DEFAULT_STUDENT_STARS
 				};
-				this.state.students.push(student);
+				this.state.students = sortStudentsAlphabetically([...this.state.students, student]);
 				newStudentInput.value = '';
 				this.updateStudentList();
 				this.updateSaveButtonState();
@@ -669,7 +673,7 @@ class KudosApp {
 						if (validData) {
 							if (confirm(t('setup.importExport.importConfirm', this.currentLocale))) {
 								this.state.className = validData.className;
-								this.state.students = validData.students;
+								this.state.students = sortStudentsAlphabetically(validData.students);
 								this.state.rules = validData.rules || [];
 								this.saveState();
 								this.render();
@@ -747,7 +751,7 @@ class KudosApp {
 
 			const addStar = () => {
 				const student = this.state.students.find(s => s.id === studentId);
-				if (student && student.stars < 4) {
+				if (student && student.stars < MAX_STARS_PER_STUDENT) {
 					student.stars++;
 					this.saveState();
 					this.updateStudentCard(studentId, student);
@@ -796,7 +800,7 @@ class KudosApp {
 				e.stopPropagation();
 				const studentId = (btn as HTMLElement).dataset.studentId!;
 				const student = this.state.students.find(s => s.id === studentId);
-				if (student && student.stars < 4) {
+				if (student && student.stars < MAX_STARS_PER_STUDENT) {
 					student.stars++;
 					this.saveState();
 					this.updateStudentCard(studentId, student);
@@ -821,13 +825,13 @@ class KudosApp {
 	private updateStudentCard(studentId: string, student: Student): void {
 		const card = document.querySelector(`[data-student-id="${studentId}"]`) as HTMLElement;
 		if (card) {
-			const stars = '⭐'.repeat(student.stars) + '☆'.repeat(4 - student.stars);
-			const starsElement = card.querySelector('.text-3xl');
+			const stars = '⭐'.repeat(student.stars) + '☆'.repeat(MAX_STARS_PER_STUDENT - student.stars);
+			const starsElement = card.querySelector('[aria-hidden="true"]');
 			const countElement = card.querySelector('.text-center .text-sm');
 			const starsLabel = t('awarding.studentCard.stars', this.currentLocale);
 
 			if (starsElement) starsElement.textContent = stars;
-			if (countElement) countElement.textContent = `${student.stars}/4 ${starsLabel}`;
+			if (countElement) countElement.textContent = `${student.stars}/${MAX_STARS_PER_STUDENT} ${starsLabel}`;
 
 			card.setAttribute('aria-label', `${student.name} ${student.stars} ${t('awarding.studentCard.ariaLabel', this.currentLocale)}`);
 
@@ -836,8 +840,8 @@ class KudosApp {
 			const removeBtn = card.querySelector('.remove-star-btn') as HTMLButtonElement;
 
 			if (addBtn) {
-				addBtn.disabled = student.stars >= 4;
-				addBtn.style.opacity = student.stars >= 4 ? '0.5' : '1';
+				addBtn.disabled = student.stars >= MAX_STARS_PER_STUDENT;
+				addBtn.style.opacity = student.stars >= MAX_STARS_PER_STUDENT ? '0.5' : '1';
 			}
 			if (removeBtn) {
 				removeBtn.disabled = student.stars <= 0;
@@ -1009,6 +1013,7 @@ class KudosApp {
 	}
 
 	private saveState(): void {
+		this.state.students = sortStudentsAlphabetically(this.state.students);
 		saveAppState(this.state);
 	}
 

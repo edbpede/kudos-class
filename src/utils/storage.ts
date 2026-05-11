@@ -1,4 +1,5 @@
 import type { AppState, ImportExportData, Student, Rule } from '../types';
+import { MAX_STARS_PER_STUDENT } from '../constants';
 
 const STORAGE_KEY = 'kudos-class-app-state';
 
@@ -18,6 +19,7 @@ export function loadAppState(): AppState {
       return {
         ...defaultAppState,
         ...parsed,
+        students: sortStudentsAlphabetically(parsed.students || []),
         rules: parsed.rules || [] // Ensure rules array exists
       };
     }
@@ -64,7 +66,7 @@ export function validateImportData(data: any): ImportExportData | null {
         typeof student.name === 'string' &&
         typeof student.stars === 'number' &&
         student.stars >= 0 &&
-        student.stars <= 4
+        student.stars <= MAX_STARS_PER_STUDENT
       );
 
       // Validate rules structure (if rules exist)
@@ -81,6 +83,7 @@ export function validateImportData(data: any): ImportExportData | null {
         // Ensure rules array exists for backward compatibility
         return {
           ...data,
+          students: sortStudentsAlphabetically(data.students),
           rules: data.rules || []
         } as ImportExportData;
       }
